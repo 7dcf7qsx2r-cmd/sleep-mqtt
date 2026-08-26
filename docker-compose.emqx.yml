@@ -1,0 +1,33 @@
+# 可选：本机用 EMQX 代替内嵌 Broker
+# docker compose -f docker-compose.emqx.yml up --build
+services:
+  mqtt-auth:
+    build: ./auth
+    container_name: sleep-mqtt-auth
+    env_file:
+      - .env
+    environment:
+      PORT: "8790"
+      MQTT_URL: mqtt://emqx:1883
+      EMQX_API_URL: http://emqx:18083
+      EMQX_DASHBOARD_USER: ${EMQX_DASHBOARD_USER:-admin}
+      EMQX_DASHBOARD_PASSWORD: ${EMQX_DASHBOARD_PASSWORD:-XiaomianMqtt1}
+      DATA_DIR: /app/data
+    volumes:
+      - ./data:/app/data
+    ports:
+      - "8790:8790"
+    restart: unless-stopped
+
+  emqx:
+    image: emqx/emqx:5.8.6
+    container_name: sleep-mqtt-emqx
+    environment:
+      EMQX_NAME: emqx
+      EMQX_HOST: 127.0.0.1
+      EMQX_DASHBOARD__DEFAULT_USERNAME: ${EMQX_DASHBOARD_USER:-admin}
+      EMQX_DASHBOARD__DEFAULT_PASSWORD: ${EMQX_DASHBOARD_PASSWORD:-XiaomianMqtt1}
+    ports:
+      - "1883:1883"
+      - "18083:18083"
+    restart: unless-stopped

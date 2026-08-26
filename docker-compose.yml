@@ -1,0 +1,34 @@
+services:
+  mqtt:
+    build: ./auth
+    container_name: sleep-mqtt
+    env_file:
+      - .env
+    environment:
+      EMBED_BROKER: "1"
+      PORT: "8790"
+      MQTT_LISTEN_PORT: "1883"
+      DATA_DIR: /app/data
+      MQTT_PUBLIC_HOST: ${MQTT_PUBLIC_HOST:-119.29.148.43}
+      MQTT_PUBLIC_PORT: "1883"
+    volumes:
+      - mqtt-data:/app/data
+    ports:
+      - "1883:1883"
+      - "8790:8790"
+    restart: unless-stopped
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "node",
+          "-e",
+          "fetch('http://127.0.0.1:8790/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))",
+        ]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 12s
+
+volumes:
+  mqtt-data:
