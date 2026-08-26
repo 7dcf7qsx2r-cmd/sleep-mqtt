@@ -34,7 +34,7 @@ curl -H "Authorization: Bearer dev-admin-token" http://127.0.0.1:8790/v1/message
 | 健康检查 | `http://119.29.148.43:8790/health` |
 | 管理 API | `http://119.29.148.43:8790` |
 
-腾讯云安全组需放行 **TCP 1883、8790**。生产 `ADMIN_TOKEN` / 设备密钥在 GitHub Secrets，不要用下面的 demo 密码。
+腾讯云安全组需放行 **TCP 1883**（设备接入）。8790 管理口默认只在机器内网，CI 用 SSH 探活。
 
 手动触发：GitHub → Actions → Deploy Production → Run workflow。
 
