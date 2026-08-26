@@ -4,5 +4,6 @@ auth/dist
 data/*.json
 data/*.sqlite
 .env
+secrets/
 *.log
 .DS_Store
