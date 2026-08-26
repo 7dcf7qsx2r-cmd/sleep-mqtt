@@ -1,8 +1,8 @@
 import mqtt from "mqtt";
 import { parseClientId } from "./policy.js";
-import type { FileStore } from "./store.js";
+import type { Store } from "./store.js";
 
-export function startBridge(store: FileStore, url: string, password: string): mqtt.MqttClient {
+export function startBridge(store: Store, url: string, password: string): mqtt.MqttClient {
   const client = mqtt.connect(url, {
     clientId: "sleep-mqtt-bridge",
     username: "bridge",

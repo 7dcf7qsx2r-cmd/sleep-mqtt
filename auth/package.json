@@ -8,7 +8,7 @@
     "start:local": "EMBED_BROKER=1 DATA_DIR=../data tsx src/index.ts",
     "dev": "tsx watch src/index.ts",
     "dev:local": "EMBED_BROKER=1 DATA_DIR=../data tsx watch src/index.ts",
-    "test": "tsx --test src/policy.test.ts src/store.test.ts",
+    "test": "tsx --test src/policy.test.ts src/store.test.ts src/broker.test.ts",
     "pub": "tsx scripts/pub.ts",
     "sub": "tsx scripts/sub.ts"
   },
@@ -16,10 +16,12 @@
     "@hono/node-server": "^1.14.1",
     "hono": "^4.7.10",
     "mqtt": "^5.14.1",
-    "aedes": "^0.51.3"
+    "aedes": "^0.51.3",
+    "pg": "^8.16.0"
   },
   "devDependencies": {
     "@types/node": "^22.15.21",
+    "@types/pg": "^8.15.2",
     "tsx": "^4.19.4",
     "typescript": "^5.8.3"
   }

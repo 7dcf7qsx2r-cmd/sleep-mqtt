@@ -1,6 +1,8 @@
 import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { randomBytes } from "node:crypto";
+import { isValidSn, normalizeSn } from "./policy.js";
+import { PgStore } from "./pgStore.js";
 
 export interface Product {
   productKey: string;
@@ -13,6 +15,8 @@ export interface Device {
   sn: string;
   deviceSecret: string;
   createdAt: string;
+  status?: string;
+  lastSeenAt?: string | null;
 }
 
 export interface IngestMessage {
@@ -22,6 +26,28 @@ export interface IngestMessage {
   topic: string;
   payload: unknown;
   receivedAt: string;
+}
+
+export interface Store {
+  readonly kind: "file" | "postgres";
+  listProducts(): Promise<Product[]>;
+  getProduct(productKey: string): Promise<Product | undefined>;
+  createProduct(name: string, productKey?: string): Promise<Product>;
+  listDevices(productKey?: string): Promise<Device[]>;
+  getDevice(sn: string): Promise<Device | undefined>;
+  createDevice(productKey: string, sn?: string): Promise<Device>;
+  upsertSeedDevice(input: {
+    productKey: string;
+    productName: string;
+    sn: string;
+    deviceSecret: string;
+  }): Promise<Device>;
+  appendMessage(msg: Omit<IngestMessage, "id" | "receivedAt"> & {
+    id?: string;
+    receivedAt?: string;
+  }): Promise<IngestMessage>;
+  listMessages(sn?: string): Promise<IngestMessage[]>;
+  close?(): Promise<void>;
 }
 
 interface DbFile {
@@ -36,9 +62,11 @@ function emptyDb(): DbFile {
   return { products: [], devices: [], messages: [] };
 }
 
-export class FileStore {
+export class FileStore implements Store {
+  readonly kind = "file" as const;
+
   constructor(private readonly filePath: string) {
-    mkdirSync(dirname(filePath), { recursive: true });
+    mkdirSync(dirname(this.filePath), { recursive: true });
   }
 
   private read(): DbFile {
@@ -59,15 +87,15 @@ export class FileStore {
     writeFileSync(this.filePath, JSON.stringify(db, null, 2));
   }
 
-  listProducts(): Product[] {
+  async listProducts(): Promise<Product[]> {
     return this.read().products;
   }
 
-  getProduct(productKey: string): Product | undefined {
+  async getProduct(productKey: string): Promise<Product | undefined> {
     return this.read().products.find((p) => p.productKey === productKey);
   }
 
-  createProduct(name: string, productKey?: string): Product {
+  async createProduct(name: string, productKey?: string): Promise<Product> {
     const db = this.read();
     const key = productKey?.trim() || slugKey(name);
     if (db.products.some((p) => p.productKey === key)) {
@@ -83,22 +111,26 @@ export class FileStore {
     return product;
   }
 
-  listDevices(productKey?: string): Device[] {
+  async listDevices(productKey?: string): Promise<Device[]> {
     const devices = this.read().devices;
     return productKey ? devices.filter((d) => d.productKey === productKey) : devices;
   }
 
-  getDevice(sn: string): Device | undefined {
-    return this.read().devices.find((d) => d.sn === sn);
+  async getDevice(sn: string): Promise<Device | undefined> {
+    const id = normalizeSn(sn);
+    return this.read().devices.find((d) => normalizeSn(d.sn) === id);
   }
 
-  createDevice(productKey: string, sn?: string): Device {
+  async createDevice(productKey: string, sn?: string): Promise<Device> {
     const db = this.read();
     if (!db.products.some((p) => p.productKey === productKey)) {
       throw new Error(`unknown product: ${productKey}`);
     }
-    const id = sn?.trim() || `SN${randomBytes(4).toString("hex").toUpperCase()}`;
-    if (db.devices.some((d) => d.sn === id)) {
+    const id = sn?.trim() ? normalizeSn(sn) : `SN${randomBytes(4).toString("hex").toUpperCase()}`;
+    if (!isValidSn(id)) {
+      throw new Error(`invalid sn: ${id}`);
+    }
+    if (db.devices.some((d) => normalizeSn(d.sn) === id)) {
       throw new Error(`device already exists: ${id}`);
     }
     const device: Device = {
@@ -106,18 +138,19 @@ export class FileStore {
       sn: id,
       deviceSecret: randomBytes(16).toString("hex"),
       createdAt: new Date().toISOString(),
+      status: "active",
     };
     db.devices.push(device);
     this.write(db);
     return device;
   }
 
-  upsertSeedDevice(input: {
+  async upsertSeedDevice(input: {
     productKey: string;
     productName: string;
     sn: string;
     deviceSecret: string;
-  }): Device {
+  }): Promise<Device> {
     const db = this.read();
     if (!db.products.some((p) => p.productKey === input.productKey)) {
       db.products.push({
@@ -126,45 +159,82 @@ export class FileStore {
         createdAt: new Date().toISOString(),
       });
     }
-    const existing = db.devices.find((d) => d.sn === input.sn);
+    const sn = normalizeSn(input.sn);
+    const existing = db.devices.find((d) => normalizeSn(d.sn) === sn);
     if (existing) {
       existing.productKey = input.productKey;
       existing.deviceSecret = input.deviceSecret;
+      existing.sn = sn;
+      existing.status = existing.status ?? "active";
       this.write(db);
       return existing;
     }
     const device: Device = {
       productKey: input.productKey,
-      sn: input.sn,
+      sn,
       deviceSecret: input.deviceSecret,
       createdAt: new Date().toISOString(),
+      status: "active",
     };
     db.devices.push(device);
     this.write(db);
     return device;
   }
 
-  appendMessage(msg: Omit<IngestMessage, "id" | "receivedAt">): IngestMessage {
+  async appendMessage(msg: Omit<IngestMessage, "id" | "receivedAt"> & {
+    id?: string;
+    receivedAt?: string;
+  }): Promise<IngestMessage> {
     const db = this.read();
     const saved: IngestMessage = {
-      ...msg,
-      id: randomBytes(8).toString("hex"),
-      receivedAt: new Date().toISOString(),
+      productKey: msg.productKey,
+      sn: normalizeSn(msg.sn),
+      topic: msg.topic,
+      payload: msg.payload,
+      id: msg.id ?? randomBytes(8).toString("hex"),
+      receivedAt: msg.receivedAt ?? new Date().toISOString(),
     };
     db.messages.unshift(saved);
     db.messages = db.messages.slice(0, MAX_MESSAGES);
+    const device = db.devices.find((d) => normalizeSn(d.sn) === saved.sn);
+    if (device) device.lastSeenAt = saved.receivedAt;
     this.write(db);
     return saved;
   }
 
-  listMessages(sn?: string): IngestMessage[] {
+  async listMessages(sn?: string): Promise<IngestMessage[]> {
     const messages = this.read().messages;
-    return sn ? messages.filter((m) => m.sn === sn) : messages;
+    if (!sn) return messages;
+    const id = normalizeSn(sn);
+    return messages.filter((m) => normalizeSn(m.sn) === id);
+  }
+
+  snapshot(): DbFile {
+    return this.read();
   }
 }
 
-export function defaultStore(dataDir = process.env.DATA_DIR ?? join(process.cwd(), "..", "data")): FileStore {
+export function defaultFileStore(dataDir = process.env.DATA_DIR ?? join(process.cwd(), "..", "data")): FileStore {
   return new FileStore(join(dataDir, "store.json"));
+}
+
+/** @deprecated use openStore / defaultFileStore */
+export function defaultStore(dataDir?: string): FileStore {
+  return defaultFileStore(dataDir);
+}
+
+export async function openStore(): Promise<Store> {
+  const url = process.env.DATABASE_URL?.trim();
+  if (url && url !== "pglite") {
+    const pg = new PgStore(url);
+    await pg.migrate();
+    const dataDir = process.env.DATA_DIR ?? join(process.cwd(), "..", "data");
+    await pg.importFromJsonFileIfEmpty(join(dataDir, "store.json"));
+    console.log("[store] postgres");
+    return pg;
+  }
+  console.log("[store] json file (set DATABASE_URL to persist in Postgres)");
+  return defaultFileStore();
 }
 
 function slugKey(name: string): string {

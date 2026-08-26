@@ -1,5 +1,14 @@
 export type MqttAction = "publish" | "subscribe";
 
+export function normalizeSn(input: string): string {
+  return input.trim().toUpperCase();
+}
+
+export function isValidSn(input: string): boolean {
+  const sn = normalizeSn(input);
+  return /^[A-Z0-9][A-Z0-9_-]{5,63}$/.test(sn) && /[0-9]/.test(sn);
+}
+
 export function parseClientId(clientId: string): { productKey: string; sn: string } | null {
   const m = /^([a-zA-Z0-9_]+)\.([A-Za-z0-9_-]+)$/.exec(clientId.trim());
   if (!m) return null;
@@ -42,13 +51,16 @@ export function vendorConnectParams(input: {
   deviceSecret: string;
   host?: string;
   port?: number;
+  tls?: boolean;
 }) {
   const host = input.host ?? "127.0.0.1";
-  const port = input.port ?? 1883;
+  const tls = input.tls === true;
+  const port = input.port ?? (tls ? 8883 : 1883);
+  const scheme = tls ? "mqtts" : "mqtt";
   return {
     productKey: input.productKey,
-    broker: `mqtt://${host}:${port}`,
-    tls: false,
+    broker: `${scheme}://${host}:${port}`,
+    tls,
     clientId: `${input.productKey}.${input.sn}`,
     username: input.sn,
     password: input.deviceSecret,

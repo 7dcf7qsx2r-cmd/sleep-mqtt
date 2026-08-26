@@ -24,7 +24,7 @@ else
 fi
 
 if command -v firewall-cmd >/dev/null 2>&1; then
-  firewall-cmd --permanent --add-port=1883/tcp || true
+  firewall-cmd --permanent --add-port=8883/tcp || true
   firewall-cmd --permanent --add-port=8790/tcp || true
   firewall-cmd --reload || true
 fi

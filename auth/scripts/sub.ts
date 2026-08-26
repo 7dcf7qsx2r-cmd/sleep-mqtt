@@ -1,20 +1,23 @@
 /**
- * 订阅设备下行，并顺带打印桥接是否收到上行（本进程只订 down）
- * 用法: MQTT_HOST=127.0.0.1 npm run sub
+ * 订阅设备下行。本机明文：npm run sub
+ * 生产 TLS：MQTT_TLS=1 MQTT_HOST=api.xmianai.com MQTT_PORT=8883 npm run sub
  */
 import mqtt from "mqtt";
 
 const host = process.env.MQTT_HOST ?? "127.0.0.1";
-const port = Number(process.env.MQTT_PORT ?? 1883);
+const tls = process.env.MQTT_TLS === "1" || process.env.MQTT_TLS === "true";
+const port = Number(process.env.MQTT_PORT ?? (tls ? 8883 : 1883));
 const productKey = process.env.SEED_PRODUCT_KEY ?? "xiaomian_mvp";
 const sn = process.env.SEED_DEVICE_SN ?? "SNDEMO0001";
 const password = process.env.SEED_DEVICE_SECRET ?? "demo-device-secret";
 const topic = `${productKey}/${sn}/down/#`;
+const scheme = tls ? "mqtts" : "mqtt";
 
-const client = mqtt.connect(`mqtt://${host}:${port}`, {
+const client = mqtt.connect(`${scheme}://${host}:${port}`, {
   clientId: `${productKey}.${sn}`,
   username: sn,
   password,
+  rejectUnauthorized: process.env.MQTT_TLS_INSECURE === "1" ? false : true,
 });
 
 client.on("connect", () => {

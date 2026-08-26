@@ -8,13 +8,19 @@ services:
       EMBED_BROKER: "1"
       PORT: "8790"
       MQTT_LISTEN_PORT: "1883"
+      MQTT_TLS: "1"
+      MQTT_TLS_PORT: "8883"
+      MQTT_TLS_CERT: /etc/letsencrypt/live/xmianai.com/fullchain.pem
+      MQTT_TLS_KEY: /etc/letsencrypt/live/xmianai.com/privkey.pem
       DATA_DIR: /app/data
-      MQTT_PUBLIC_HOST: ${MQTT_PUBLIC_HOST:-119.29.148.43}
-      MQTT_PUBLIC_PORT: "1883"
+      MQTT_PUBLIC_HOST: ${MQTT_PUBLIC_HOST:-api.xmianai.com}
+      MQTT_PUBLIC_PORT: "8883"
     volumes:
       - mqtt-data:/app/data
+      - /etc/letsencrypt:/etc/letsencrypt:ro
     ports:
-      - "1883:1883"
+      - "8883:8883"
+      - "127.0.0.1:1883:1883"
       - "8790:8790"
     restart: unless-stopped
     healthcheck:
