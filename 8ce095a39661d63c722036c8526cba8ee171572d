@@ -1,0 +1,52 @@
+auth/src/broker.ts
+  4c5b675c683fbb53 1-2,5-78
+VENDOR.md
+  4c5b675c683fbb53 1-20
+scripts/ci/render-dotenv.sh
+  4c5b675c683fbb53 1-26
+auth/src/index.ts
+  4c5b675c683fbb53 17-122
+auth/.dockerignore
+  4c5b675c683fbb53 1-4
+.github/workflows/ci.yml
+  4c5b675c683fbb53 1-23
+docker-compose.yml
+  4c5b675c683fbb53 2-34
+auth/package.json
+  4c5b675c683fbb53 8-19
+scripts/ci/deploy-remote.sh
+  4c5b675c683fbb53 1-44
+README.md
+  4c5b675c683fbb53 3-59
+auth/Dockerfile
+  4c5b675c683fbb53 9
+auth/src/emqx.ts
+  4c5b675c683fbb53 1-155
+docker-compose.emqx.yml
+  4c5b675c683fbb53 1-33
+.dockerignore
+  4c5b675c683fbb53 1-6
+.github/workflows/deploy-production.yml
+  4c5b675c683fbb53 1-81
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "8ce095a39661d63c722036c8526cba8ee171572d",
+  "prompts": {
+    "4c5b675c683fbb53": {
+      "agent_id": {
+        "tool": "cursor",
+        "id": "9b8d194a-3b07-4f5a-b48c-7554b28d133f",
+        "model": "grok-4.6"
+      },
+      "human_author": "pengjun5437513 <cunminjia@qq.com>",
+      "messages": [],
+      "total_additions": 571,
+      "total_deletions": 141,
+      "accepted_lines": 526,
+      "overriden_lines": 3,
+      "messages_url": "https://gitai.gz.cvte.cn/cas/9672d74b592a12970c4f13ac0ab61ef4f275bb870f19941736a14e6e8b86ce4c"
+    }
+  }
+}
