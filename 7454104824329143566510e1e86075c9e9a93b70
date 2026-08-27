@@ -1,0 +1,58 @@
+auth/src/bridge.ts
+  4c5b675c683fbb53 2,5-12,24,30-31,38-43
+auth/scripts/sub.ts
+  4c5b675c683fbb53 11,13
+auth/src/store.ts
+  4c5b675c683fbb53 11,37,41,101-124,171-203
+auth/src/policy.test.ts
+  4c5b675c683fbb53 2,4-15,22-25,29-49,52-83,88,92,97,102,115
+.github/workflows/deploy-production.yml
+  4c5b675c683fbb53 54-56
+VENDOR.md
+  4c5b675c683fbb53 1,3-16,19,21-29,31-33,35-36,38
+README.md
+  4c5b675c683fbb53 53,55-62,75
+auth/src/index.ts
+  4c5b675c683fbb53 7,39-46,79-85
+scripts/ci/render-dotenv.sh
+  4c5b675c683fbb53 30-32
+auth/src/catalog.ts
+  4c5b675c683fbb53 1-15
+auth/src/pgStore.ts
+  4c5b675c683fbb53 89-95,101,106-112,117-150,219-246
+auth/scripts/pub.ts
+  4c5b675c683fbb53 11,13,26-32
+auth/src/access.ts
+  4c5b675c683fbb53 1,25-26,28-52,70-72
+auth/src/store.test.ts
+  4c5b675c683fbb53 76-101
+certs/README.md
+  4c5b675c683fbb53 1-7
+auth/src/schema.ts
+  4c5b675c683fbb53 8,23,27
+auth/src/policy.ts
+  4c5b675c683fbb53 1-2,14-21,23-24,26-79,90-129,137-139,142-143,146,163-164,169-170,172-174
+.env.example
+  4c5b675c683fbb53 8-11
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "7454104824329143566510e1e86075c9e9a93b70",
+  "prompts": {
+    "4c5b675c683fbb53": {
+      "agent_id": {
+        "tool": "cursor",
+        "id": "9b8d194a-3b07-4f5a-b48c-7554b28d133f",
+        "model": "grok-4.6"
+      },
+      "human_author": "pengjun5437513 <cunminjia@qq.com>",
+      "messages": [],
+      "total_additions": 569,
+      "total_deletions": 138,
+      "accepted_lines": 513,
+      "overriden_lines": 0,
+      "messages_url": "https://gitai.gz.cvte.cn/cas/26d9c467cadd64f98e70c9cd103d6fc48696d1b685b827aae9c55da99dac4bfc"
+    }
+  }
+}
