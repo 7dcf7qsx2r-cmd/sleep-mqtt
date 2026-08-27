@@ -1,0 +1,32 @@
+scripts/ci/deploy-remote.sh
+  4c5b675c683fbb53 32
+auth/src/index.ts
+  4c5b675c683fbb53 46,57-73
+.github/workflows/deploy-production.yml
+  4c5b675c683fbb53 87
+auth/src/access.ts
+  4c5b675c683fbb53 12-19,25-27,29-32,34-38,41-72,75-76,80-82
+auth/src/broker.ts
+  4c5b675c683fbb53 66-70
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "23e184fb2ba1732d0b9832952266a73372ba5e23",
+  "prompts": {
+    "4c5b675c683fbb53": {
+      "agent_id": {
+        "tool": "cursor",
+        "id": "9b8d194a-3b07-4f5a-b48c-7554b28d133f",
+        "model": "grok-4.6"
+      },
+      "human_author": "pengjun5437513 <cunminjia@qq.com>",
+      "messages": [],
+      "total_additions": 84,
+      "total_deletions": 44,
+      "accepted_lines": 83,
+      "overriden_lines": 0,
+      "messages_url": "https://gitai.gz.cvte.cn/cas/c5e0ef9003848a36f4e2b634ccf3355bb94e25e987f8e5aaec84ec390dea7b32"
+    }
+  }
+}
