@@ -8,9 +8,9 @@ const host = process.env.MQTT_HOST ?? "127.0.0.1";
 const tls = process.env.MQTT_TLS === "1" || process.env.MQTT_TLS === "true";
 const port = Number(process.env.MQTT_PORT ?? (tls ? 8883 : 1883));
 const productKey = process.env.SEED_PRODUCT_KEY ?? "xiaomian_mvp";
-const sn = process.env.SEED_DEVICE_SN ?? "SNDEMO0001";
+const sn = (process.env.SEED_DEVICE_SN ?? "SNDEMO0001").toUpperCase();
 const password = process.env.SEED_DEVICE_SECRET ?? "demo-device-secret";
-const topic = `${productKey}/${sn}/up/realtime`;
+const topic = `/sys/${productKey}/${sn}/thing/property/post`;
 const scheme = tls ? "mqtts" : "mqtt";
 
 const client = mqtt.connect(`${scheme}://${host}:${port}`, {
@@ -23,11 +23,13 @@ const client = mqtt.connect(`${scheme}://${host}:${port}`, {
 
 client.on("connect", () => {
   const payload = JSON.stringify({
-    sn,
-    heartRate: 62,
-    respiratoryRate: 16,
-    isbed: 1,
-    timeStamp: new Date().toISOString(),
+    method: "thing.property.post",
+    version: "1.0",
+    params: {
+      deviceName: sn,
+      airbagsPerson: [1, 0],
+      HR: [62, 16, 0, 0, 0, 0],
+    },
   });
   client.publish(topic, payload, { qos: 1 }, (err) => {
     if (err) {

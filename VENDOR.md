@@ -1,20 +1,38 @@
-发给设备厂商的接入参数（小眠 MQTT MVP · 本机）
+发给设备厂商的接入参数（小眠 MQTT · IB43 物模型）
 
-productKey: xiaomian_mvp
-MQTT: mqtt://<你们的IP>:1883
-TLS: 暂无（本机 MVP）。上线后再改为 mqtts://mqtts.xmianai.com:8883
+Broker: mqtts://api.xmianai.com:8883
+TLS: 必须。信任 ISRG Root X1，证书文件 certs/isrg-root-x1.pem
+固件填域名 api.xmianai.com，不要填 IP。服务端私钥不下发。
+
+productKey（一款产品一个）：
+
+| 机型 | productKey |
+|---|---|
+| CIS-IB 智能床垫 | cis_ib |
+| CIS-ISWB 智能撑腰床垫 | cis_iswb |
+| CIS-IP 智能枕 | cis_ip |
+
+SN = username = 设备唯一编号（可为 MAC 无冒号，如 744DBD7785D4）。
+烧录时生成即可，首次 CONNECT 自动登记，不必预先报号。
 
 鉴权：
-- sn = 设备唯一编码（示例 SNDEMO0001）
-- clientId = {productKey}.{sn}   例：xiaomian_mvp.SNDEMO0001
+- clientId = {productKey}.{sn}
 - username = sn
-- password = 出厂密钥（示例 demo-device-secret）
+- password = HMAC-SHA256(productSecret, "{productKey}.{sn}") hex 小写
+  联调也可直接用 productSecret
+  SN 建议大写；若固件用机身 MAC 原文做 username，HMAC 用同一段原文即可
 
-Topic：
-- 上报：{productKey}/{sn}/up/realtime
-- 下行：{productKey}/{sn}/down/#
+Topic（与贵司宏一致，第一个 %s=productKey，第二个 %s=sn）：
 
-上报 JSON 示例：
-{"sn":"SNDEMO0001","heartRate":62,"respiratoryRate":16,"isbed":1,"timeStamp":"2026-08-26T09:55:31.050Z"}
+订阅（云→设备）：
+- /sys/{productKey}/{sn}/thing/ota/upgrade
+- /sys/{productKey}/{sn}/thing/service/invoke
 
-设备只能发/订自己的 sn。错密码或发别人的 Topic 会被断开。
+发布（设备→云）：
+- /sys/{productKey}/{sn}/thing/property/post
+- /sys/{productKey}/{sn}/thing/ota/progress
+
+属性上报 JSON 按贵司文档：method=thing.property.post，params 含开机配置 / 实时气囊电机心率 / SleepReportNew。
+控制下发 JSON：method=thing.service.invoke，发到 service/invoke。
+
+productSecret 量产密钥走加密通道另发。实验室默认 lab-{productKey}-secret，勿烧进量产固件。

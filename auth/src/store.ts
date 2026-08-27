@@ -8,6 +8,7 @@ export interface Product {
   productKey: string;
   name: string;
   createdAt: string;
+  productSecret?: string;
 }
 
 export interface Device {
@@ -33,9 +34,11 @@ export interface Store {
   listProducts(): Promise<Product[]>;
   getProduct(productKey: string): Promise<Product | undefined>;
   createProduct(name: string, productKey?: string): Promise<Product>;
+  ensureProduct(input: { productKey: string; name: string; productSecret: string }): Promise<Product>;
   listDevices(productKey?: string): Promise<Device[]>;
   getDevice(sn: string): Promise<Device | undefined>;
   createDevice(productKey: string, sn?: string): Promise<Device>;
+  ensureDevice(input: { productKey: string; sn: string; deviceSecret: string }): Promise<Device>;
   upsertSeedDevice(input: {
     productKey: string;
     productName: string;
@@ -95,6 +98,30 @@ export class FileStore implements Store {
     return this.read().products.find((p) => p.productKey === productKey);
   }
 
+  async ensureProduct(input: {
+    productKey: string;
+    name: string;
+    productSecret: string;
+  }): Promise<Product> {
+    const db = this.read();
+    const existing = db.products.find((p) => p.productKey === input.productKey);
+    if (existing) {
+      existing.name = input.name;
+      existing.productSecret = input.productSecret;
+      this.write(db);
+      return existing;
+    }
+    const product: Product = {
+      productKey: input.productKey,
+      name: input.name,
+      productSecret: input.productSecret,
+      createdAt: new Date().toISOString(),
+    };
+    db.products.push(product);
+    this.write(db);
+    return product;
+  }
+
   async createProduct(name: string, productKey?: string): Promise<Product> {
     const db = this.read();
     const key = productKey?.trim() || slugKey(name);
@@ -137,6 +164,39 @@ export class FileStore implements Store {
       productKey,
       sn: id,
       deviceSecret: randomBytes(16).toString("hex"),
+      createdAt: new Date().toISOString(),
+      status: "active",
+    };
+    db.devices.push(device);
+    this.write(db);
+    return device;
+  }
+
+  async ensureDevice(input: {
+    productKey: string;
+    sn: string;
+    deviceSecret: string;
+  }): Promise<Device> {
+    const db = this.read();
+    if (!db.products.some((p) => p.productKey === input.productKey)) {
+      throw new Error(`unknown product: ${input.productKey}`);
+    }
+    const sn = normalizeSn(input.sn);
+    if (!isValidSn(sn)) throw new Error(`invalid sn: ${sn}`);
+    const existing = db.devices.find((d) => normalizeSn(d.sn) === sn);
+    if (existing) {
+      if (existing.productKey !== input.productKey) {
+        throw new Error(`sn already registered to ${existing.productKey}`);
+      }
+      existing.deviceSecret = input.deviceSecret;
+      existing.status = "active";
+      this.write(db);
+      return existing;
+    }
+    const device: Device = {
+      productKey: input.productKey,
+      sn,
+      deviceSecret: input.deviceSecret,
       createdAt: new Date().toISOString(),
       status: "active",
     };

@@ -4,6 +4,7 @@ import { decideAcl, decideAuth } from "./access.js";
 import { startBridge } from "./bridge.js";
 import { startEmbeddedBroker } from "./broker.js";
 import { configureEmqxHttpAuth, waitForEmqx } from "./emqx.js";
+import { CIS_PRODUCTS } from "./catalog.js";
 import { vendorConnectParams } from "./policy.js";
 import { openStore } from "./store.js";
 
@@ -35,6 +36,14 @@ await store.upsertSeedDevice({
   sn: process.env.SEED_DEVICE_SN ?? "SNDEMO0001",
   deviceSecret: process.env.SEED_DEVICE_SECRET ?? "demo-device-secret",
 });
+for (const product of CIS_PRODUCTS) {
+  const secret = process.env[product.envSecret]?.trim() || `lab-${product.productKey}-secret`;
+  await store.ensureProduct({
+    productKey: product.productKey,
+    name: product.name,
+    productSecret: secret,
+  });
+}
 
 function requireAdmin(c: { req: { header: (name: string) => string | undefined } }): boolean {
   const header = c.req.header("authorization") ?? "";
@@ -67,7 +76,13 @@ app.post("/mqtt/acl", async (c) => {
 
 app.get("/v1/products", async (c) => {
   if (!requireAdmin(c)) return c.json({ error: "unauthorized" }, 401);
-  return c.json({ products: await store.listProducts() });
+  return c.json({
+    products: (await store.listProducts()).map((product) => ({
+      productKey: product.productKey,
+      name: product.name,
+      createdAt: product.createdAt,
+    })),
+  });
 });
 
 app.post("/v1/products", async (c) => {

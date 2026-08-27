@@ -1,5 +1,5 @@
+import { parseConnectIdentity, productAuthMatches, topicAllowed } from "./policy.js";
 import { timingSafeEqual } from "node:crypto";
-import { parseClientId, topicAllowed } from "./policy.js";
 import type { Store } from "./store.js";
 
 function secretsEqual(left: string, right: string): boolean {
@@ -22,10 +22,34 @@ export async function decideAuth(
     return { result: "allow", is_superuser: true };
   }
 
-  const parsed = parseClientId(clientid);
-  if (!parsed || parsed.sn !== username) return { result: "deny" };
+  const parsed = parseConnectIdentity(clientid, username);
+  if (!parsed) return { result: "deny" };
 
-  const device = await store.getDevice(username);
+    const product = await store.getProduct(parsed.productKey);
+  if (product?.productSecret && productAuthMatches(
+    product.productSecret,
+    parsed.productKey,
+    parsed.sn,
+    password,
+    username,
+  )) {
+    const existing = await store.getDevice(parsed.sn);
+    if (existing && existing.productKey !== parsed.productKey) {
+      return { result: "deny" };
+    }
+    try {
+      await store.ensureDevice({
+        productKey: parsed.productKey,
+        sn: parsed.sn,
+        deviceSecret: password,
+      });
+    } catch {
+      return { result: "deny" };
+    }
+    return { result: "allow", is_superuser: false };
+  }
+
+  const device = await store.getDevice(parsed.sn);
   if (!device || device.productKey !== parsed.productKey) return { result: "deny" };
   if ((device.status ?? "active") !== "active") return { result: "deny" };
   if (!secretsEqual(device.deviceSecret, password)) return { result: "deny" };
@@ -43,9 +67,9 @@ export async function decideAcl(
     return { result: "allow" };
   }
 
-  const parsed = parseClientId(clientid);
-  if (!parsed || parsed.sn !== username) return { result: "deny" };
-  const device = await store.getDevice(username);
+  const parsed = parseConnectIdentity(clientid, username);
+  if (!parsed) return { result: "deny" };
+  const device = await store.getDevice(parsed.sn);
   if (!device || device.productKey !== parsed.productKey) return { result: "deny" };
   if ((device.status ?? "active") !== "active") return { result: "deny" };
 

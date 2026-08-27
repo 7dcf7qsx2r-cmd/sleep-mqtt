@@ -50,15 +50,16 @@ TLS 证书是现有 `xmianai.com` 证书（SAN 含 `api.xmianai.com`）。固件
 
 | 项 | 值 |
 |---|---|
-| productKey | `xiaomian_mvp` |
+| productKey | `cis_ib` / `cis_iswb` / `cis_ip`（一型一密，不可共用） |
 | Broker | `mqtts://api.xmianai.com:8883` |
-| TLS | 必须，端口 **8883** |
-| sn | 分配的序列号（演示号 `SNDEMO0001`） |
-| clientId | `{productKey}.{sn}`，如 `xiaomian_mvp.SNDEMO0001` |
-| username | sn |
-| password | 对应 deviceSecret |
-| 上报 Topic | `{productKey}/{sn}/up/realtime` |
-| 下行 Topic | `{productKey}/{sn}/down/#` |
+| TLS | 必须；根证书 `certs/isrg-root-x1.pem` |
+| sn | 烧录时生成，首次 CONNECT 自动登记 |
+| clientId | `{productKey}.{sn}` |
+| username | sn，或 `sn&productKey` |
+| password | HMAC-SHA256(productSecret, `{productKey}.{sn}`) hex，或联调用 productSecret |
+| Topic | `/sys/{productKey}/{sn}/thing/property/post` 上报；`/thing/service/invoke` 与 `/thing/ota/upgrade` 订阅 |
+
+详见 `VENDOR.md`。
 
 ## 本机演示（无 TLS）
 
@@ -71,7 +72,7 @@ TLS 证书是现有 `xmianai.com` 证书（SAN 含 `api.xmianai.com`）。固件
 ## 规则
 
 - `clientId` = `{productKey}.{sn}`
-- 只能发 `{productKey}/{sn}/up/...`，只能订 `{productKey}/{sn}/down/...`
+- 设备 Topic 必须带自己的 `{productKey}/{sn}`（含 `/sys/{productKey}/{sn}/thing/...`）
 
 ```bash
 cd auth && npm test

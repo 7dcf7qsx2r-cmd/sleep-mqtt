@@ -73,3 +73,29 @@ test("ingest stores raw payload and lastSeen", async () => {
   assert.ok(device?.lastSeenAt);
   rmSync(dir, { recursive: true, force: true });
 });
+
+test("product secret auto-registers unseen sn", async () => {
+  const dir = mkdtempSync(join(tmpdir(), "sleep-mqtt-"));
+  const store = new FileStore(join(dir, "store.json"));
+  await store.ensureProduct({
+    productKey: "cis_ib",
+    name: "CIS-IB",
+    productSecret: "lab-cis_ib-secret",
+  });
+  const { hmacDevicePassword } = await import("./policy.js");
+  const password = hmacDevicePassword("lab-cis_ib-secret", "cis_ib", "SNNEW0001");
+  assert.equal((await decideAuth(store, {
+    clientid: "cis_ib.SNNEW0001",
+    username: "SNNEW0001",
+    password,
+  }, "bridge")).result, "allow");
+  const created = await store.getDevice("SNNEW0001");
+  assert.equal(created?.productKey, "cis_ib");
+  assert.equal((await decideAcl(store, {
+    clientid: "cis_ib.SNNEW0001",
+    username: "SNNEW0001",
+    topic: "/cis_ib/SNNEW0001/user/update",
+    action: "publish",
+  })).result, "allow");
+  rmSync(dir, { recursive: true, force: true });
+});

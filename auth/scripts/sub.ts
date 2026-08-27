@@ -8,9 +8,9 @@ const host = process.env.MQTT_HOST ?? "127.0.0.1";
 const tls = process.env.MQTT_TLS === "1" || process.env.MQTT_TLS === "true";
 const port = Number(process.env.MQTT_PORT ?? (tls ? 8883 : 1883));
 const productKey = process.env.SEED_PRODUCT_KEY ?? "xiaomian_mvp";
-const sn = process.env.SEED_DEVICE_SN ?? "SNDEMO0001";
+const sn = (process.env.SEED_DEVICE_SN ?? "SNDEMO0001").toUpperCase();
 const password = process.env.SEED_DEVICE_SECRET ?? "demo-device-secret";
-const topic = `${productKey}/${sn}/down/#`;
+const topic = `/sys/${productKey}/${sn}/thing/#`;
 const scheme = tls ? "mqtts" : "mqtt";
 
 const client = mqtt.connect(`${scheme}://${host}:${port}`, {

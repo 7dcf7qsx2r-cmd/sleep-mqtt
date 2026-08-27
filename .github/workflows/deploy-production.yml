@@ -51,6 +51,9 @@ jobs:
           BRIDGE_SECRET: ${{ secrets.BRIDGE_SECRET }}
           SEED_DEVICE_SECRET: ${{ secrets.SEED_DEVICE_SECRET }}
           DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          CIS_IB_PRODUCT_SECRET: ${{ secrets.CIS_IB_PRODUCT_SECRET }}
+          CIS_ISWB_PRODUCT_SECRET: ${{ secrets.CIS_ISWB_PRODUCT_SECRET }}
+          CIS_IP_PRODUCT_SECRET: ${{ secrets.CIS_IP_PRODUCT_SECRET }}
           MQTT_PUBLIC_HOST: ${{ vars.MQTT_PUBLIC_HOST || 'api.xmianai.com' }}
           SEED_PRODUCT_KEY: ${{ vars.SEED_PRODUCT_KEY || 'xiaomian_mvp' }}
           SEED_DEVICE_SN: ${{ vars.SEED_DEVICE_SN || 'SNDEMO0001' }}

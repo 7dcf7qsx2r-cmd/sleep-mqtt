@@ -1,6 +1,14 @@
 import mqtt from "mqtt";
-import { parseClientId } from "./policy.js";
+import { parseTopicIdentity } from "./policy.js";
 import type { Store } from "./store.js";
+
+const INGEST_FILTERS = [
+  "+/+/up/#",
+  "+/+/#",
+  "/+/+/#",
+  "sys/+/+/#",
+  "/sys/+/+/#",
+];
 
 export function startBridge(store: Store, url: string, password: string): mqtt.MqttClient {
   const client = mqtt.connect(url, {
@@ -13,24 +21,26 @@ export function startBridge(store: Store, url: string, password: string): mqtt.M
 
   client.on("connect", () => {
     console.log("[bridge] connected", url);
-    client.subscribe("+/+/up/#", { qos: 1 }, (err) => {
+    client.subscribe(INGEST_FILTERS, { qos: 1 }, (err) => {
       if (err) console.warn("[bridge] subscribe failed", err.message);
     });
   });
 
   client.on("message", (topic, payload) => {
-    const parts = topic.split("/");
-    const productKey = parts[0] ?? "";
-    const sn = parts[1] ?? "";
+    const parsed = parseTopicIdentity(topic);
+    if (!parsed) return;
     let body: unknown = payload.toString("utf8");
     try {
       body = JSON.parse(String(body));
     } catch {
       /* keep string */
     }
-    const parsed = parseClientId(`${productKey}.${sn}`);
-    if (!parsed) return;
-    store.appendMessage({ productKey, sn, topic, payload: body });
+    store.appendMessage({
+      productKey: parsed.productKey,
+      sn: parsed.sn,
+      topic,
+      payload: body,
+    });
     console.log("[bridge] ingest", topic);
   });
 

@@ -86,24 +86,68 @@ export class PgStore implements Store {
   }
 
   async listProducts(): Promise<Product[]> {
-    const { rows } = await this.pool.query<{ product_key: string; name: string; created_at: Date }>(
-      `SELECT product_key, name, created_at FROM iot_products ORDER BY created_at ASC`,
+    const { rows } = await this.pool.query<{
+      product_key: string;
+      name: string;
+      created_at: Date;
+      product_secret: string | null;
+    }>(
+      `SELECT product_key, name, created_at, product_secret FROM iot_products ORDER BY created_at ASC`,
     );
     return rows.map((r) => ({
       productKey: r.product_key,
       name: r.name,
       createdAt: r.created_at.toISOString(),
+      productSecret: r.product_secret ?? undefined,
     }));
   }
 
   async getProduct(productKey: string): Promise<Product | undefined> {
-    const { rows } = await this.pool.query<{ product_key: string; name: string; created_at: Date }>(
-      `SELECT product_key, name, created_at FROM iot_products WHERE product_key = $1`,
+    const { rows } = await this.pool.query<{
+      product_key: string;
+      name: string;
+      created_at: Date;
+      product_secret: string | null;
+    }>(
+      `SELECT product_key, name, created_at, product_secret FROM iot_products WHERE product_key = $1`,
       [productKey],
     );
     const r = rows[0];
     if (!r) return undefined;
-    return { productKey: r.product_key, name: r.name, createdAt: r.created_at.toISOString() };
+    return {
+      productKey: r.product_key,
+      name: r.name,
+      createdAt: r.created_at.toISOString(),
+      productSecret: r.product_secret ?? undefined,
+    };
+  }
+
+  async ensureProduct(input: {
+    productKey: string;
+    name: string;
+    productSecret: string;
+  }): Promise<Product> {
+    const { rows } = await this.pool.query<{
+      product_key: string;
+      name: string;
+      created_at: Date;
+      product_secret: string | null;
+    }>(
+      `INSERT INTO iot_products (product_key, name, product_secret)
+       VALUES ($1, $2, $3)
+       ON CONFLICT (product_key) DO UPDATE SET
+         name = EXCLUDED.name,
+         product_secret = EXCLUDED.product_secret
+       RETURNING product_key, name, created_at, product_secret`,
+      [input.productKey, input.name, input.productSecret],
+    );
+    const r = rows[0]!;
+    return {
+      productKey: r.product_key,
+      name: r.name,
+      createdAt: r.created_at.toISOString(),
+      productSecret: r.product_secret ?? undefined,
+    };
   }
 
   async createProduct(name: string, productKey?: string): Promise<Product> {
@@ -170,6 +214,34 @@ export class PgStore implements Store {
       if (code === "23505") throw new Error(`device already exists: ${id}`);
       throw err;
     }
+  }
+
+  async ensureDevice(input: {
+    productKey: string;
+    sn: string;
+    deviceSecret: string;
+  }): Promise<Device> {
+    const product = await this.getProduct(input.productKey);
+    if (!product) throw new Error(`unknown product: ${input.productKey}`);
+    const sn = normalizeSn(input.sn);
+    if (!isValidSn(sn)) throw new Error(`invalid sn: ${sn}`);
+    const existing = await this.getDevice(sn);
+    if (existing && existing.productKey !== input.productKey) {
+      throw new Error(`sn already registered to ${existing.productKey}`);
+    }
+    const { rows } = await this.pool.query<DeviceRow>(
+      `INSERT INTO iot_devices (sn, product_key, device_secret, status)
+       VALUES ($1, $2, $3, 'active')
+       ON CONFLICT (sn) DO UPDATE SET
+         device_secret = EXCLUDED.device_secret,
+         status = 'active'
+       WHERE iot_devices.product_key = EXCLUDED.product_key
+       RETURNING sn, product_key, device_secret, status, last_seen_at, created_at`,
+      [sn, input.productKey, input.deviceSecret],
+    );
+    this.deviceCache.delete(sn);
+    if (!rows[0]) throw new Error(`sn already registered`);
+    return mapDevice(rows[0]);
   }
 
   async upsertSeedDevice(input: {
