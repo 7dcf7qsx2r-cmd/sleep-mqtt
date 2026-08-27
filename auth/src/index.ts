@@ -43,6 +43,7 @@ for (const product of CIS_PRODUCTS) {
     name: product.name,
     productSecret: secret,
   });
+  console.log("[auth] product ready", product.productKey, "secretLen", secret.length);
 }
 
 function requireAdmin(c: { req: { header: (name: string) => string | undefined } }): boolean {
@@ -53,16 +54,23 @@ function requireAdmin(c: { req: { header: (name: string) => string | undefined }
 
 const app = new Hono();
 
-app.get("/health", (c) => c.json({
-  ok: true,
-  service: "sleep-mqtt-auth",
-  storage: store.kind,
-  tls: publicTls,
-  broker: publicTls
-    ? `mqtts://${publicHost}:${publicPort}`
-    : `mqtt://${publicHost}:${publicPort}`,
-  plaintext: `mqtt://127.0.0.1:${brokerPort}`,
-}));
+app.get("/health", async (c) => {
+  const products = await store.listProducts().catch(() => []);
+  return c.json({
+    ok: true,
+    service: "sleep-mqtt-auth",
+    storage: store.kind,
+    tls: publicTls,
+    broker: publicTls
+      ? `mqtts://${publicHost}:${publicPort}`
+      : `mqtt://${publicHost}:${publicPort}`,
+    plaintext: `mqtt://127.0.0.1:${brokerPort}`,
+    products: products.map((product) => ({
+      productKey: product.productKey,
+      hasSecret: Boolean(product.productSecret),
+    })),
+  });
+});
 
 app.post("/mqtt/auth", async (c) => {
   const body = await c.req.json().catch(() => ({}));

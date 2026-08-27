@@ -29,6 +29,7 @@ if command -v firewall-cmd >/dev/null 2>&1; then
   firewall-cmd --reload || true
 fi
 
+$COMPOSE down --remove-orphans || true
 $COMPOSE up --build -d
 
 for i in 1 2 3 4 5 6 7 8 9 10; do

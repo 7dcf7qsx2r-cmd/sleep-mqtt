@@ -63,7 +63,11 @@ export async function startEmbeddedBroker(input: {
       void decideAuth(input.store, {
         clientid: client.id,
         username: String(username ?? ""),
-        password: password?.toString() ?? "",
+        password: Buffer.isBuffer(password)
+          ? password.toString("utf8")
+          : password instanceof Uint8Array
+            ? Buffer.from(password).toString("utf8")
+            : String(password ?? ""),
       }, input.bridgeSecret).then((result) => {
         if (result.result !== "allow") {
           done(null, false);

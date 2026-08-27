@@ -84,4 +84,4 @@ jobs:
       - name: Health check on server
         run: |
           ssh -o StrictHostKeyChecking=no -p "$SERVER_PORT" "${SERVER_USER}@${SERVER_HOST}" \
-            "curl -sf http://127.0.0.1:8790/health"
+            "curl -sf http://127.0.0.1:8790/health; echo; (podman logs --tail 40 sleep-mqtt || docker logs --tail 40 sleep-mqtt) 2>/dev/null | tail -40"
