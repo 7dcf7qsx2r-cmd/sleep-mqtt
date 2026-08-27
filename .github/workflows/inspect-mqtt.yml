@@ -1,0 +1,63 @@
+name: Inspect MQTT Ingest
+
+on:
+  workflow_dispatch:
+
+jobs:
+  inspect:
+    runs-on: ubuntu-latest
+    environment: production
+    env:
+      SERVER_HOST: ${{ vars.SERVER_HOST || '119.29.148.43' }}
+      SERVER_USER: ${{ vars.SERVER_USER || 'root' }}
+      SERVER_PORT: ${{ vars.SERVER_PORT || '22' }}
+    steps:
+      - name: Setup SSH
+        uses: webfactory/ssh-agent@v0.9.0
+        with:
+          ssh-private-key: ${{ secrets.SERVER_SSH_KEY }}
+
+      - name: Query devices and messages
+        run: |
+          ssh -o StrictHostKeyChecking=accept-new -p "$SERVER_PORT" "${SERVER_USER}@${SERVER_HOST}" bash -s <<'EOF'
+          set -euo pipefail
+          echo "=== health ==="
+          curl -sf http://127.0.0.1:8790/health
+          echo
+          echo "=== recent ingest logs ==="
+          (podman logs --since 8h sleep-mqtt || docker logs --since 8h sleep-mqtt) 2>/dev/null | grep -E 'ingest|deny |product ready|14639369CE28|cis_' | tail -60 || true
+          echo
+          echo "=== postgres ==="
+          podman exec sleep-mqtt node --input-type=module -e '
+          import pg from "pg";
+          const pool = new pg.Pool({ connectionString: process.env.DATABASE_URL, max: 1 });
+          const devices = await pool.query(`
+            SELECT sn, product_key, status, last_seen_at
+            FROM iot_devices
+            ORDER BY last_seen_at DESC NULLS LAST
+            LIMIT 20
+          `);
+          const counts = await pool.query(`
+            SELECT sn, product_key, COUNT(*)::int AS n, MAX(received_at) AS last_at
+            FROM iot_messages
+            GROUP BY 1, 2
+            ORDER BY last_at DESC
+            LIMIT 20
+          `);
+          const vendor = await pool.query(`
+            SELECT sn, product_key, topic, received_at, left(raw_json::text, 400) AS raw
+            FROM iot_messages
+            WHERE sn = $1
+            ORDER BY received_at DESC
+            LIMIT 8
+          `, ["14639369CE28"]);
+          const latest = await pool.query(`
+            SELECT sn, product_key, topic, received_at, left(raw_json::text, 240) AS raw
+            FROM iot_messages_latest
+            ORDER BY received_at DESC
+            LIMIT 15
+          `);
+          console.log(JSON.stringify({ devices: devices.rows, counts: counts.rows, vendor: vendor.rows, latest: latest.rows }, null, 2));
+          await pool.end();
+          '
+          EOF
