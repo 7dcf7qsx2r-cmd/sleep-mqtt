@@ -1,0 +1,24 @@
+.github/workflows/inspect-mqtt.yml
+  4c5b675c683fbb53 60-83
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "703a95fa3ab9210ff0961f8f553f7176199b36df",
+  "prompts": {
+    "4c5b675c683fbb53": {
+      "agent_id": {
+        "tool": "cursor",
+        "id": "9b8d194a-3b07-4f5a-b48c-7554b28d133f",
+        "model": "grok-4.6"
+      },
+      "human_author": "pengjun5437513 <cunminjia@qq.com>",
+      "messages": [],
+      "total_additions": 24,
+      "total_deletions": 1,
+      "accepted_lines": 24,
+      "overriden_lines": 0,
+      "messages_url": "https://gitai.gz.cvte.cn/cas/06d9dec8e96c71fb49667fda3070627ad6711bb30dd24da51fd33eabd09813b9"
+    }
+  }
+}
