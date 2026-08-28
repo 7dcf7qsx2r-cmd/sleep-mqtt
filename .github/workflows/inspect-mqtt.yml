@@ -62,22 +62,10 @@ jobs:
             FROM iot_device_bindings
             WHERE sn = $1
           `, ["14639369CE28"]);
-          const pillowLatest = await pool.query(`
-            SELECT received_at,
-              raw_json #>> '{params,deviceStatus,heart}' AS heart,
-              raw_json #>> '{params,deviceStatus,breathing}' AS breathing,
-              raw_json #>> '{params,deviceStatus,person}' AS person,
-              left(raw_json::text, 220) AS raw
-            FROM iot_messages_latest
-            WHERE sn = $1
-            ORDER BY received_at DESC
-            LIMIT 3
-          `, ["14639369CE28"]);
           console.log(JSON.stringify({
             devices: devices.rows,
             counts: counts.rows,
             bindings: bindings.rows,
-            pillowLatest: pillowLatest.rows,
             vendor: vendor.rows,
             latest: latest.rows,
           }, null, 2));
