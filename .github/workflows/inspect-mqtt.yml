@@ -64,9 +64,9 @@ jobs:
           `, ["14639369CE28"]);
           const pillowLatest = await pool.query(`
             SELECT received_at,
-              raw_json->'params'->'deviceStatus'->>'heart' AS heart,
-              raw_json->'params'->'deviceStatus'->>'breathing' AS breathing,
-              raw_json->'params'->'deviceStatus'->>'person' AS person,
+              raw_json #>> '{params,deviceStatus,heart}' AS heart,
+              raw_json #>> '{params,deviceStatus,breathing}' AS breathing,
+              raw_json #>> '{params,deviceStatus,person}' AS person,
               left(raw_json::text, 220) AS raw
             FROM iot_messages_latest
             WHERE sn = $1
