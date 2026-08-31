@@ -1,0 +1,32 @@
+auth/package.json
+  4c5b675c683fbb53 11
+auth/src/downlink.ts
+  4c5b675c683fbb53 1-106
+auth/src/index.ts
+  4c5b675c683fbb53 6,152-172,188,202
+VENDOR.md
+  4c5b675c683fbb53 36
+auth/src/downlink.test.ts
+  4c5b675c683fbb53 1-135
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.6",
+  "base_commit_sha": "cbed1306b79fcbdae6224a8e75a025e8342c064b",
+  "prompts": {
+    "4c5b675c683fbb53": {
+      "agent_id": {
+        "tool": "cursor",
+        "id": "9b8d194a-3b07-4f5a-b48c-7554b28d133f",
+        "model": "grok-4.6"
+      },
+      "human_author": "pengjun5437513 <cunminjia@qq.com>",
+      "messages": [],
+      "total_additions": 267,
+      "total_deletions": 4,
+      "accepted_lines": 267,
+      "overriden_lines": 0,
+      "messages_url": "https://gitai.gz.cvte.cn/cas/4f1f6072eb3ff4e327c0484344f91ba4761ac358c3ec5fc19d3a2f9b26e48bb0"
+    }
+  }
+}
