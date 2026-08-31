@@ -8,7 +8,7 @@
     "start:local": "EMBED_BROKER=1 DATA_DIR=../data tsx src/index.ts",
     "dev": "tsx watch src/index.ts",
     "dev:local": "EMBED_BROKER=1 DATA_DIR=../data tsx watch src/index.ts",
-    "test": "tsx --test src/policy.test.ts src/store.test.ts src/broker.test.ts",
+    "test": "tsx --test src/policy.test.ts src/store.test.ts src/broker.test.ts src/downlink.test.ts",
     "pub": "tsx scripts/pub.ts",
     "sub": "tsx scripts/sub.ts"
   },

@@ -3,6 +3,7 @@ import { Hono } from "hono";
 import { decideAcl, decideAuth } from "./access.js";
 import { startBridge } from "./bridge.js";
 import { startEmbeddedBroker } from "./broker.js";
+import { attachDownlinkPublisher, DownlinkError, parseCommandBody, publishServiceInvoke } from "./downlink.js";
 import { configureEmqxHttpAuth, waitForEmqx } from "./emqx.js";
 import { CIS_PRODUCTS } from "./catalog.js";
 import { vendorConnectParams } from "./policy.js";
@@ -148,6 +149,27 @@ app.get("/v1/messages", async (c) => {
   return c.json({ messages: await store.listMessages(c.req.query("sn")) });
 });
 
+app.post("/v1/command", async (c) => {
+  if (!requireAdmin(c)) return c.json({ error: "unauthorized" }, 401);
+  const body = await c.req.json().catch(() => ({})) as Record<string, unknown>;
+  try {
+    const command = parseCommandBody(body);
+    const result = await publishServiceInvoke({
+      productKey: command.productKey,
+      sn: command.sn,
+      payload: command.payload,
+    });
+    console.log("[downlink] published", result.topic);
+    return c.json({ ok: true, topic: result.topic });
+  } catch (err) {
+    if (err instanceof DownlinkError) {
+      const status = err.code === "unavailable" ? 503 : 400;
+      return c.json({ error: err.code, message: err.message }, status);
+    }
+    return c.json({ error: "failed", message: err instanceof Error ? err.message : "failed" }, 500);
+  }
+});
+
 serve({ fetch: app.fetch, port, hostname: "0.0.0.0" }, () => {
   console.log(`[auth] listening on :${port}`);
 });
@@ -163,7 +185,7 @@ void (async () => {
         ? { port: tlsPort, certPath: tlsCert, keyPath: tlsKey }
         : undefined,
     });
-    startBridge(store, `mqtt://127.0.0.1:${brokerPort}`, bridgeSecret);
+    attachDownlinkPublisher(startBridge(store, `mqtt://127.0.0.1:${brokerPort}`, bridgeSecret));
     console.log("[auth] embedded broker mode (no EMQX)");
     return;
   }
@@ -177,7 +199,7 @@ void (async () => {
       aclUrl: `http://mqtt-auth:${port}/mqtt/acl`,
     });
     console.log("[auth] EMQX HTTP auth/ACL ready");
-    startBridge(store, mqttUrl, bridgeSecret);
+    attachDownlinkPublisher(startBridge(store, mqttUrl, bridgeSecret));
   } catch (err) {
     console.error("[auth] EMQX bootstrap failed", err);
   }

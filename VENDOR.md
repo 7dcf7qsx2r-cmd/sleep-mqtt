@@ -33,6 +33,6 @@ Topic（与贵司宏一致，第一个 %s=productKey，第二个 %s=sn）：
 - /sys/{productKey}/{sn}/thing/ota/progress
 
 属性上报 JSON 按贵司文档：method=thing.property.post，params 含开机配置 / 实时气囊电机心率 / SleepReportNew。
-控制下发 JSON：method=thing.service.invoke，发到 service/invoke。
+控制下发 JSON：method=thing.service.invoke，发到 service/invoke。云端由 sleep-mqtt `POST /v1/command`（ADMIN_TOKEN）发布，App 走 sleep-api `POST /iot/devices/:sn/command`。一次消息只带一个服务对象。
 
 productSecret 量产密钥走加密通道另发。实验室默认 lab-{productKey}-secret，勿烧进量产固件。
