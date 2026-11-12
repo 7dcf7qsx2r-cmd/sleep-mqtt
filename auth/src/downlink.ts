@@ -104,3 +104,20 @@ export async function publishServiceInvoke(input: {
   });
   return { topic };
 }
+
+/** 把已经入平台的上报再发到 Broker，给直接订阅主题的客户端看。发布失败不影响平台记录。 */
+export async function publishMqttMessage(input: {
+  topic: string;
+  payload: unknown;
+  timeoutMs?: number;
+}): Promise<void> {
+  if (!publisher) return;
+  await waitConnected(publisher, input.timeoutMs ?? 5000);
+  const body = typeof input.payload === "string" ? input.payload : JSON.stringify(input.payload);
+  await new Promise<void>((resolve, reject) => {
+    publisher!.publish(input.topic, body, { qos: 1 }, (err) => {
+      if (err) reject(err);
+      else resolve();
+    });
+  });
+}

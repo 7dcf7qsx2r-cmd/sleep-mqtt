@@ -3,7 +3,8 @@ import { Hono } from "hono";
 import { decideAcl, decideAuth } from "./access.js";
 import { startBridge } from "./bridge.js";
 import { startEmbeddedBroker } from "./broker.js";
-import { attachDownlinkPublisher, DownlinkError, parseCommandBody, publishServiceInvoke } from "./downlink.js";
+import { attachDownlinkPublisher, DownlinkError, parseCommandBody, publishMqttMessage, publishServiceInvoke } from "./downlink.js";
+import { acceptDeviceReport, BR_MATTRESS_PRODUCT_KEY, IngestError } from "./ingest.js";
 import { configureEmqxHttpAuth, waitForEmqx } from "./emqx.js";
 import { CIS_PRODUCTS } from "./catalog.js";
 import { vendorConnectParams } from "./policy.js";
@@ -37,6 +38,13 @@ await store.upsertSeedDevice({
   sn: process.env.SEED_DEVICE_SN ?? "SNDEMO0001",
   deviceSecret: process.env.SEED_DEVICE_SECRET ?? "demo-device-secret",
 });
+await store.ensureProduct({
+  productKey: BR_MATTRESS_PRODUCT_KEY,
+  name: "小眠智能床垫-薄",
+  productSecret: process.env.BR_MATTRESS_PRODUCT_SECRET?.trim() || "lab-br_mattress-secret",
+});
+console.log("[auth] product ready", BR_MATTRESS_PRODUCT_KEY);
+
 for (const product of CIS_PRODUCTS) {
   const secret = process.env[product.envSecret]?.trim() || `lab-${product.productKey}-secret`;
   await store.ensureProduct({
@@ -147,6 +155,26 @@ app.post("/v1/devices", async (c) => {
 app.get("/v1/messages", async (c) => {
   if (!requireAdmin(c)) return c.json({ error: "unauthorized" }, 401);
   return c.json({ messages: await store.listMessages(c.req.query("sn")) });
+});
+
+app.post("/v1/ingest", async (c) => {
+  if (!requireAdmin(c)) return c.json({ error: "unauthorized" }, 401);
+  const body = await c.req.json().catch(() => null);
+  try {
+    const report = await acceptDeviceReport(store, body);
+    let published = true;
+    try {
+      await publishMqttMessage({ topic: report.topic, payload: report.payload });
+    } catch (err) {
+      published = false;
+      console.warn("[ingest] broker publish failed", err instanceof Error ? err.message : err);
+    }
+    console.log("[ingest] stored", report.topic);
+    return c.json({ ok: true, sn: report.sn, topic: report.topic, published });
+  } catch (err) {
+    if (err instanceof IngestError) return c.json({ error: "rejected", message: err.message }, 400);
+    return c.json({ error: "failed", message: err instanceof Error ? err.message : "failed" }, 500);
+  }
 });
 
 app.post("/v1/command", async (c) => {
